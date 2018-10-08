@@ -1,8 +1,22 @@
-/*******************************************************/
-/*                                                     */
-/* SERGIO GONZALEZ VELAZQUEZ y DAVID CARNEROS PRADO    */
-/*                                                     */
-/*******************************************************/
+/*************************************************************
+*                                                     
+* 			SERGIO GONZALEZ VELAZQUEZ y DAVID CARNEROS PRADO  
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+************************************************************/
 
 
 #include <QApplication>
@@ -15,86 +29,6 @@
 #define COLOUR_DEPTH 4
 
 omp_lock_t lock[256];
-
-double computeGraySequential(QImage *image) {
-  double start_time = omp_get_wtime();
-  uchar *pixelPtr = image->bits();
-
-  for (int ii = 0; ii < image->byteCount(); ii += COLOUR_DEPTH) {
-
-    QRgb* rgbpixel = reinterpret_cast<QRgb*>(pixelPtr + ii);
-    int gray = qGray(*rgbpixel);
-    *rgbpixel = QColor(gray, gray, gray).rgba();
-  }
-  return omp_get_wtime() - start_time;
-}
-
-double computeGrayParallel(QImage *image) {
-  double start_time = omp_get_wtime();
-  uchar *pixelPtr = image->bits();
-
-#pragma omp parallel for
-  for (int ii = 0; ii < image->byteCount(); ii += COLOUR_DEPTH) {
-
-    QRgb* rgbpixel = reinterpret_cast<QRgb*>(pixelPtr + ii);
-    int gray = qGray(*rgbpixel);
-    *rgbpixel = QColor(gray, gray, gray).rgba();
-  }
-  return omp_get_wtime() - start_time;
-}
-
-double computeGrayScanline(QImage *image) {
-  double start_time = omp_get_wtime();
-  int alto = image->height(); int ancho = image->width();
-  int jj, gray; uchar* scan; QRgb* rgbpixel;
-  for (int ii = 0; ii < alto; ii++) {
-
-    scan = image->scanLine(ii);
-    for (jj = 0; jj < ancho; jj++) {
-
-      rgbpixel = reinterpret_cast<QRgb*>(scan + jj * COLOUR_DEPTH);
-      gray = qGray(*rgbpixel);
-      *rgbpixel = QColor(gray, gray, gray).rgba();
-    }
-  }
-  return omp_get_wtime() - start_time;
-}
-
-/************ FUNCION AÑADIDA ***************/
-
-/* Hemos paralelizado el primer "for", ya que es de reparto de trabajo.
-El segundo "for" sin embargo, no es de reparto de trabajo, cuando entra una hebra
-lo ejecuta secuencialmente de manera completa. Para ello hemos utilizado la directiva
-pragma omp parallel for, y hemos declarado como variables privadas las que se utilizan
-dentro del segundo bucle (jj,rgbpixel,gray y scan).
-Para proteger como seccion critica la instrucion "scan = image->scanLine(ii);" Hemos
-utlizado la directiva critical ya que no podiamos utilizar ni atomic ni reduction. */
-
-double computeGrayScanlineParallel(QImage *image) {
-  double start_time = omp_get_wtime();
-  int alto = image->height(); int ancho = image->width();
-  int jj, gray; uchar* scan; QRgb* rgbpixel;
-
-  #pragma omp parallel for private(jj,rgbpixel,gray,scan)
-  for (int ii = 0; ii < alto; ii++) {
-
-    #pragma omp critical
-    {
-    scan = image->scanLine(ii);
-    }
-
-    for (jj = 0; jj < ancho; jj++) {
-
-      rgbpixel = reinterpret_cast<QRgb*>(scan + jj * COLOUR_DEPTH);
-      gray = qGray(*rgbpixel);
-      *rgbpixel = QColor(gray, gray, gray).rgba();
-    }
-  }
-  return omp_get_wtime() - start_time;
-}
-
-
-/**************************************************/
 
 
 double computeHistogramSecuencial(QImage *image,int histgr[]) {
@@ -238,32 +172,32 @@ int main(int argc, char *argv[])
     printf("sequential time: %0.9f seconds\n", computeTime);
 
     computeTime = computeHistogramCritical(&image,histgrAux);
-    printf("Critical time: %0.9f seconds\n", computeTime);
+    printf("critical time: %0.9f seconds\n", computeTime);
 
-    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y critial son iguales \n");
-    else printf("Algoritmo secuencial y critical son diferentes \n"); 
+    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y paralelo con 'critical' dan el mismo datagrama \n");
+    else printf("Algoritmo secuencial y paralelo con 'critical' NO dan el mismo datagrama \n"); 
 
 	memset(histgrAux,0,sizeof(histgrAux));
     computeTime = computeHistogramAtomic(&image,histgrAux);
     printf("Atomic time: %0.9f seconds\n", computeTime);
+    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y paralelo con 'atomic' dan el mismo datagrama \n");
+    else printf("Algoritmo secuencial y paralelo con 'atomic' NO dan el mismo datagrama \n"); 
 
-    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y Atomic son iguales \n");
-    else printf("Algoritmo secuencial y Atomic son diferentes \n"); 
 
 
 	memset(histgrAux,0,sizeof(histgrAux));
     computeTime = computeHistogramReduction(&image,histgrAux);
     printf("Reduction time: %0.9f seconds\n", computeTime);
+    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y paralelo con 'reduction' dan el mismo datagrama \n");
+    else printf("Algoritmo secuencial y paralelo con 'reduction' NO dan el mismo datagrama \n"); 
 
-    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y reduction son iguales \n");
-    else printf("Algoritmo secuencial y reduction son diferentes \n"); 
 
 	memset(histgrAux,0,sizeof(histgrAux));
     computeTime = computeHistogramLock(&image,histgrAux);
     printf("Locks time: %0.9f seconds\n", computeTime);
+    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y paralelo con 'locks' dan el mismo datagrama \n");
+    else printf("Algoritmo secuencial y paralelo con 'locks' NO dan el mismo datagrama \n"); 
 
-    if (compararHist(histgr,histgrAux)) printf("Algoritmo secuencial y Locks son iguales \n");
-    else printf("Algoritmo secuencial y Locks son diferentes \n"); 
 
    /*
    QPixmap pixmap = pixmap.fromImage(auxImage);
