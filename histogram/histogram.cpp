@@ -70,6 +70,8 @@ double computeHistogramCritical(QImage *image,int histgr[]) {
 
 /* -------- VERSION PARALELA CON ATOMIC -------- */
 
+
+
 double computeHistogramAtomic(QImage *image,int histgr[]) {
   double start_time = omp_get_wtime();
   uchar *pixelPtr = image->bits();
@@ -93,7 +95,7 @@ double computeHistogramReduction(QImage *image,int histgr[]) {
   double start_time = omp_get_wtime();
   uchar *pixelPtr = image->bits();
 
-  #pragma omp parallel for reduction(+:histgr)
+  #pragma omp parallel for reduction(+:histgr[:256])
 
   for (int ii = 0; ii < image->byteCount(); ii += COLOUR_DEPTH) {
 
