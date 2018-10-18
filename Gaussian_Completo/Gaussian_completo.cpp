@@ -6,6 +6,11 @@
 #include <omp.h>
 
 #define N 5
+#define SEQ 0 
+#define PARAL 1
+#define SEQ_HOR_PARAL_VERT 2
+#define PARAL_HOR_SEQ_VERT 3
+
 const int M=N/2;
 int matrizGauss[N][N] =	{{ 1, 4, 6, 4,1 },
 						 { 4,16,24,16,4 },
@@ -53,6 +58,32 @@ double naive_matriz(QImage* image, QImage* result) {
   
   return omp_get_wtime() - start_time;    
 }	// Fin naive_matriz
+
+
+double separa_vectores(QImage* image, QImage* result, int flag){
+
+  double start_time = omp_get_wtime();
+   
+  switch(flag){
+    case SEQ:
+
+    break;
+
+    case PARAL:
+    break;
+
+    case SEQ_HOR_PARAL_VERT:
+
+    break;
+
+    case PARAL_HOR_SEQ_VERT:
+
+    break;
+  }  
+
+  return omp_get_wtime() - start_time;  
+
+}
 
 
 int main(int argc, char *argv[])
