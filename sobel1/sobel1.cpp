@@ -1,17 +1,24 @@
-
-/**
-
-tiempo Sobel básico: 0,128611388 segundos
-tiempo Sobel Paralelo: 0,175052620 segundos
-
-schedule static 6 --> 0,239515744 segundos
-schedule dynamic 6 -->  0,204192400 segundos
-schedule static altura/nºprocesadores --> 0,203713559 segundos
-shcedule dynamic alutra/nºprocesadores --> 0,162446580 segundos
-
-
-
-**/
+/******************************************************************
+*
+*       SERGIO GONZALEZ VELAZQUEZ y DAVID CARNEROS PRADO 
+*
+*   tiempo Sobel básico: 0,128611388 segundos
+*   tiempo Sobel Paralelo sin 'schedule': 0,175052620 segundos
+*
+*   schedule static 6 --> 0,239515744 segundos
+*   schedule dynamic 6 -->  0,204192400 segundos
+*   schedule static altura/nºprocesadores --> 0,203713559 segundos
+*   shcedule dynamic alutra/nºprocesadores --> 0,162446580 segundos
+* 
+*   La funcion paralelizada que mejor tiempo tiene en la
+*   la mayoria de las ejecuciones es en la que utilizamos la clausua 
+*   schedule asignando las iteraciones a las hebras con 
+*   'dynamic (altura/nº de procesadores)'. 
+*
+*   No obstante, la funcion paralelizada no reduce el tiempo de ejecucion
+*   de la version secuencial, ya que existe una seccion critica y las hebras 
+*   deben sincronizarse.
+****************************************************************/
 
 
 #include <QtGui/QApplication>
