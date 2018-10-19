@@ -17,6 +17,7 @@ int matrizGauss[N][N] =	{{ 1, 4, 6, 4,1 },
 						 { 6,24,36,24,6 },
 						 { 4,16,24,16,4 },
 						 { 1, 4, 6, 4,1}};
+						 
 int vectorGauss[N] = { 1, 4, 6, 4, 1 };
 
 int alto, ancho;
