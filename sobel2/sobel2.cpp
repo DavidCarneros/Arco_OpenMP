@@ -188,9 +188,12 @@ double SobelLocalParallel(QImage *srcImage, QImage *dstImage) {
 
       if (pixelValue > 255) pixelValue = 255;
       if (pixelValue < 0) pixelValue = 0;
-	
+	 
+      #pragma omp critical 
+      {
       dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	// Se actualiza la imagen destino
-
+      }
+      
       if(jj!=srcImage->width()-2){
       	recargarLocal(local,ii,jj,srcImage);
       }
