@@ -1,24 +1,50 @@
-/******************************************************************
+/**********************************************************************************************
 *
 *       SERGIO GONZALEZ VELAZQUEZ y DAVID CARNEROS PRADO 
 *
-*   tiempo Sobel básico: 0,128611388 segundos
-*   tiempo Sobel Paralelo sin 'schedule': 0,175052620 segundos
+*   --> Implementacion:
+*			
+*			-Para hacer uso de la localidad de los datos del algoritmo utilizamos una matriz de 3x3
+*			a la que llamamos 'local'. En ella se almacena el valor de los 6 píxeles que se reutilizan 
+*			y los 3 nuevos.
 *
-*   schedule static 6 --> 0,239515744 segundos
-*   schedule dynamic 6 -->  0,204192400 segundos
-*   schedule static altura/nºprocesadores --> 0,203713559 segundos
-*   shcedule dynamic alutra/nºprocesadores --> 0,162446580 segundos
-* 
-*   La funcion paralelizada que mejor tiempo tiene en la
-*   la mayoria de las ejecuciones es en la que utilizamos la clausua 
-*   schedule asignando las iteraciones a las hebras con 
-*   'dynamic (altura/nº de procesadores)'. 
+*			-Las funciones 'cargarLocal' y 'desplazarLocal' se utilizan para manipular dicha matriz.
+*			la funcion 'cargarLocal'se utiliza cada vez que se cambia de fila en el recorrido de la
+*			imagen, puesto que en ese momento no se pueden reutilizar pixeles anteriores y tenemos que 
+*			llenar la matriz local con el valor de los pixeles vecinos al pixel seleccionado. 
+*			Por su parte, la funcíon 'desplazarLocal' se utiliza cada vez que se selecciona un pixel
+*			de la misma fila pero siguiente columna para, descartar los 3 pixeles que ya no se utilizan
+*			y cargar los 3 nuevos pixeles vecinos al nuevo pixel seleccionado.
 *
-*   No obstante, la funcion paralelizada no reduce el tiempo de ejecucion
-*   de la version secuencial, ya que existe una seccion critica y las hebras 
-*   deben sincronizarse.
-****************************************************************/
+*
+*	
+*	--> Conclusiones sobre la Tarea2:
+*			-Usando la localidad se consigue reducir de manera considerable el tiempo del algoritmo basico. El tiempo
+*			del algoritmo sobel que hace uso de la localidad es aproximadamente la mitad del tiempo del algoritmo basico.
+*			Es un resultado logico, pues reutilizando el valor de pixeles estamos reduciendo considerablemente el numero
+*			de accesos a memoria.
+*
+*			-Sin embargo, el algortimo SobelLocalParallel tiene el peor tiempo entre todos los demas algoritmos.
+*			Esto puede deberse a que esta funcion cuenta con una sección crítica, lo que significa que unas hebras
+*			tienen que esperar hasta que ocurra algo en otra hebra. Estas esperas implican perdida de rendimiento.  
+*
+*			-En lo que respecta a los algoritmos que usan los dos kernels, la diferencia de tiempos entre la version
+*			secuencial y la version paralela es insignificante. 
+*
+*
+*   --> Nota: Los tiempos de ejecucion utilizados para llegar a las conclusiones
+*             han sido obtenidos ejecutando el programa en un ordenador con 2 nucleos.
+*
+*             En dicha ejecucion, se ha obtenido la siguiente salida:
+*
+*               -SobelBasico: 	 		0,208841042 segundos
+*               -SobelParallel:  		0,297414780 segundos
+*               -SobelLocal: 			0,119368309 segundos
+*				-SobelLocalParallel: 	0,363313016 segundos
+*               -SobelCompleto: 		0,139035615 segundos
+*               -SobelCompletoParallel: 0,135005969 segundos
+*
+************************************************************************************************/
 
 
 #include <QtGui/QApplication>
@@ -36,9 +62,9 @@ int weight[3][3] = 	{{ 1,  2,  1 },
 					 { -1,  -2,  -1 }
 					};
 
-int kernel2[3][3] = {{-1,0,1},
-					 {-2,0,2},
-					 {-1,0,1}};
+int kernel2[3][3] = {{ -1, 0, 1},
+					 { -2, 0, 2 },
+					 { -1, 0, 1}};
 
 
 double SobelBasico(QImage *srcImage, QImage *dstImage) {
@@ -96,6 +122,7 @@ double SobelParallel(QImage *srcImage, QImage *dstImage) {
   return omp_get_wtime() - start_time;  
 }
 
+
 void cargarLocal(int local[][3] ,QImage *srcImage,int ii){
 	for(int i=-1; i<=1;i++){
 		for(int j=-1; j<= 1 ; j++){
@@ -104,7 +131,7 @@ void cargarLocal(int local[][3] ,QImage *srcImage,int ii){
 	}
 }
 
-void recargarLocal(int local[][3],int ii,int jj,QImage *srcImage){
+void desplazarLocal(int local[][3],int ii,int jj,QImage *srcImage){
 
 	local[0][0] = local[0][1];
 	local[1][0] = local[1][1];
@@ -129,18 +156,17 @@ double SobelLocal(QImage *srcImage, QImage *dstImage) {
 
   for (ii = 1; ii < srcImage->height() - 1; ii++) {  	// Recorremos la imagen pixel a pixel, excepto los bordes
     
-  	 cargarLocal(local,srcImage,ii); // Recargar la matriz local 
-  	 // Cada vez que se cambia de fila se recagarga la matriz local. 
+  	 cargarLocal(local,srcImage,ii); 
+  	 /*Cada vez que hay un cambio de fila (ii aumenta su valor) tenemos que volver a
+  	 a llenar la matriz local porque no se pueden reutilizar el valor de otros pixeles */ 
 
-    for (jj = 1; jj < srcImage->width() - 1; jj++) {
-      
+    for (jj = 1; jj < srcImage->width() - 1; jj++) {      
      // Aplicamos el kernel weight[3][3] al pixel y su entorno
-
       pixelValue = 0;
-      for (int i = -1; i <= 1; i++) {					// Recorremos el kernel weight[3][3]
+      for (int i = -1; i <= 1; i++) {					// Recorremos el kernel weight[3][3] y la matriz local[3][3]
           for (int j = -1; j <= 1; j++) {
-			blue = local[i+1][j+1];  //qBlue(srcImage->pixel(jj+j, ii+i));	// Sintaxis pixel: pixel(columna, fila), es decir pixel(x,y)
-            pixelValue += weight[i + 1][j + 1] * blue;	// En pixelValue se calcula el componente y del gradiente
+			blue = local[i+1][j+1]; //Reutilizamos el valor de los pixeles almacenados en local
+            pixelValue += weight[i + 1][j + 1] * blue;	// En pixelValue se calcula el componente 'y' del gradiente
           }
       }
 
@@ -149,8 +175,9 @@ double SobelLocal(QImage *srcImage, QImage *dstImage) {
 	
       dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	// Se actualiza la imagen destino
 
-      if(jj!=srcImage->width()-2){
-      	recargarLocal(local,ii,jj,srcImage);
+      if(jj!=srcImage->width()-2){ 
+      /*La matriz local se desplaza mientras el pixel actual este en una fila anterior a la penultima*/
+      	desplazarLocal(local,ii,jj,srcImage);
       }
       
 
@@ -167,22 +194,18 @@ double SobelLocalParallel(QImage *srcImage, QImage *dstImage) {
   int local[3][3];
   memset(local,0,sizeof(int)*3*2);
 
-  #pragma omp parallel for private(pixelValue,local,blue,jj) schedule(dynamic,((srcImage->height())/omp_get_num_procs()))
+  #pragma omp parallel for private(pixelValue,blue,local,jj) schedule(dynamic,((srcImage->height())/omp_get_num_procs()))
 
-  for (ii = 1; ii < srcImage->height() - 1; ii++) {  	// Recorremos la imagen pixel a pixel, excepto los bordes
+  for (ii = 1; ii < srcImage->height() - 1; ii++) { 
     
-  	 cargarLocal(local,srcImage,ii); // Recargar la matriz local 
-  	 // Cada vez que se cambia de fila se recagarga la matriz local. 
-
+  	 cargarLocal(local,srcImage,ii); 
     for (jj = 1; jj < srcImage->width() - 1; jj++) {
-      
-     // Aplicamos el kernel weight[3][3] al pixel y su entorno
 
       pixelValue = 0;
-      for (int i = -1; i <= 1; i++) {					// Recorremos el kernel weight[3][3]
+      for (int i = -1; i <= 1; i++) {					
           for (int j = -1; j <= 1; j++) {
-			blue = local[i+1][j+1];  //qBlue(srcImage->pixel(jj+j, ii+i));	// Sintaxis pixel: pixel(columna, fila), es decir pixel(x,y)
-            pixelValue += weight[i + 1][j + 1] * blue;	// En pixelValue se calcula el componente y del gradiente
+			blue = local[i+1][j+1];  
+            pixelValue += weight[i + 1][j + 1] * blue;	
           }
       }
 
@@ -191,11 +214,11 @@ double SobelLocalParallel(QImage *srcImage, QImage *dstImage) {
 	 
       #pragma omp critical 
       {
-      dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	// Se actualiza la imagen destino
+      dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	
       }
       
       if(jj!=srcImage->width()-2){
-      	recargarLocal(local,ii,jj,srcImage);
+      	desplazarLocal(local,ii,jj,srcImage);
       }
       
 
@@ -211,23 +234,21 @@ double SobelCompleto(QImage *srcImage, QImage *dstImage) {
   int local[3][3];
   memset(local,0,sizeof(int)*3*2);
 
-  for (ii = 1; ii < srcImage->height() - 1; ii++) {  	// Recorremos la imagen pixel a pixel, excepto los bordes
+  for (ii = 1; ii < srcImage->height() - 1; ii++) { 
     
-  	 cargarLocal(local,srcImage,ii); // Recargar la matriz local 
-  	 // Cada vez que se cambia de fila se recagarga la matriz local. 
+  	cargarLocal(local,srcImage,ii); 
 
     for (jj = 1; jj < srcImage->width() - 1; jj++) {
-      
-     // Aplicamos el kernel weight[3][3] al pixel y su entorno
+     
       gy=0,gx=0;
       pixelValue = 0;
-      for (int i = -1; i <= 1; i++) {					// Recorremos el kernel weight[3][3]
+      for (int i = -1; i <= 1; i++) {					
           for (int j = -1; j <= 1; j++) {
-			blue = local[i+1][j+1];  //qBlue(srcImage->pixel(jj+j, ii+i));	// Sintaxis pixel: pixel(columna, fila), es decir pixel(x,y)
+			blue = local[i+1][j+1];  
 			gy += weight[i+1][j+1]*blue;
 			gx += kernel2[i+1][j+1]*blue;
 			
-           	// En pixelValue se calcula el componente y del gradiente
+ 
           }
       }
 
@@ -239,7 +260,7 @@ double SobelCompleto(QImage *srcImage, QImage *dstImage) {
       dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	// Se actualiza la imagen destino
 
       if(jj!=srcImage->width()-2){
-      	recargarLocal(local,ii,jj,srcImage);
+      	desplazarLocal(local,ii,jj,srcImage);
       }
       
 
@@ -257,23 +278,18 @@ double SobelCompletoParallel(QImage *srcImage, QImage *dstImage) {
 
   #pragma omp parallel for private(pixelValue,jj,blue,gx,gy,local) schedule(dynamic,((srcImage->height())/omp_get_num_procs()))
 
-  for (ii = 1; ii < srcImage->height() - 1; ii++) {  	// Recorremos la imagen pixel a pixel, excepto los bordes
+  for (ii = 1; ii < srcImage->height() - 1; ii++) {  	
     
-  	 cargarLocal(local,srcImage,ii); // Recargar la matriz local 
-  	 // Cada vez que se cambia de fila se recagarga la matriz local. 
-
+  	cargarLocal(local,srcImage,ii); 
     for (jj = 1; jj < srcImage->width() - 1; jj++) {
-      
-     // Aplicamos el kernel weight[3][3] al pixel y su entorno
       gy=0,gx=0;
       pixelValue = 0;
-      for (int i = -1; i <= 1; i++) {					// Recorremos el kernel weight[3][3]
+      for (int i = -1; i <= 1; i++) {					
           for (int j = -1; j <= 1; j++) {
-			blue = local[i+1][j+1];  //qBlue(srcImage->pixel(jj+j, ii+i));	// Sintaxis pixel: pixel(columna, fila), es decir pixel(x,y)
+			blue = local[i+1][j+1];  
 			gy += weight[i+1][j+1]*blue;
 			gx += kernel2[i+1][j+1]*blue;
-			
-           	// En pixelValue se calcula el componente y del gradiente
+
           }
       }
       
@@ -285,7 +301,7 @@ double SobelCompletoParallel(QImage *srcImage, QImage *dstImage) {
       dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	// Se actualiza la imagen destino
 
       if(jj!=srcImage->width()-2){
-      	recargarLocal(local,ii,jj,srcImage);
+      	desplazarLocal(local,ii,jj,srcImage);
       }
       
 
@@ -350,6 +366,7 @@ int main(int argc, char *argv[])
 	if (sobelCompletoImage == sobelImageAux) printf("Algoritmo sobel completo y sobel completo paralelo dan la misma imagen\n");
 	else printf("Algoritmo sobel completo y sobel completo paralelo dan distinta imagen\n");
 
+    /*Visualizacion de la imagen resultante de aplicar los dos kernels */
     QPixmap pixmap = pixmap.fromImage(sobelCompletoImage);
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(pixmap);
     scene.addItem(item);
