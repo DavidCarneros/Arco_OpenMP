@@ -67,7 +67,7 @@ void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
   int h, w, i, j;
   int mini, minj, supi, supj;
   QRgb aux;  
-  double start_time = omp_get_wtime();
+  
 
   for (h = 0; h < alto; h++)
     
@@ -79,7 +79,7 @@ void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
 		 Además, los índices i y j de la matriz deben cumplir 0<=j<N, 0<=i<N
 		 Se deduce:  máx(M-w,0) <= j < mín(ancho+M-w,N); máx(M-h,0) <= i < mín(alto+M-h,N)*/
 	  
-	  red=green=blue=0;
+	  
 
 	  mini = max((M-h),0); minj = max((M-w),0);					// Ver comentario anterior
 	  supi = min((alto+M-h),N); supj = min((ancho+M-w),N);	    // Íd.
@@ -102,12 +102,12 @@ void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
   //return omp_get_wtime() - start_time;    
 }	// Fin naive_matriz
 
-void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
+void aplicar_vect_horizontal(QImage *image,int* red, int* green, int* blue, QImage* result) {
   
   int h, w, i, j;
   int mini, minj, supi, supj;
   QRgb aux;  
-  double start_time = omp_get_wtime();
+ // double start_time = omp_get_wtime();
 
   for (h = 0; h < alto; h++)
     
@@ -119,7 +119,8 @@ void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
 		 Además, los índices i y j de la matriz deben cumplir 0<=j<N, 0<=i<N
 		 Se deduce:  máx(M-w,0) <= j < mín(ancho+M-w,N); máx(M-h,0) <= i < mín(alto+M-h,N)*/
 	  
-	  red=green=blue=0;
+	  
+
 
 	  mini = max((M-h),0); minj = max((M-w),0);					// Ver comentario anterior
 	  supi = min((alto+M-h),N); supj = min((ancho+M-w),N);	    // Íd.
@@ -127,16 +128,14 @@ void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
 	  for (i=mini; i<supi; i++)
 		for (j=minj; j<supj; j++)	{
 
-			// aux = image->pixel(w-M+j, h-M+i);
+			aux = image->pixel(w-M+j, h-M+i);
 
-			red[h*ancho + w]+= vectorGauss[j]*red[(h-M+i)*ancho + (w-M+j)];
-			green[h*ancho + w] += vectorGauss[j]*green[(h-M+i)*ancho + (w-M+j)];
-			blue[h*ancho + w] += vectorGauss[j]*blue[(h-M+i)*ancho + (w-M+j)];
+			red[h*ancho + w] += vectorGauss[j]*qRed(aux);
+			green[h*ancho + w] += vectorGauss[j]*qGreen(aux);
+			blue[h*ancho + w] += vectorGauss[j]*qBlue(aux);
 		};
 
-	  	
-
-		result->setPixel(w,h, QColor(red[h*ancho + w]/256, green[h*ancho + w]/256, blue[h*ancho + w]/256).rgba());
+		 result->setPixel(w,h, QColor(red[h*ancho + w]/256, green[h*ancho + w]/256, blue[h*ancho + w]/256).rgba());
       
 	}
   
@@ -154,14 +153,14 @@ double separa_vectores(QImage* image, QImage* result, int flag){
   green=(int *)malloc(ancho*alto*sizeof(int));
   blue=(int *)malloc(ancho*alto*sizeof(int));
 
-  //memset(red,0,sizeof(int)*alto*ancho);
-  //memset(green,0,sizeof(int)*alto*ancho);
-  //memset(blue,0,sizeof(int)*alto*ancho);
+  memset(red,0,sizeof(int)*alto*ancho);
+  memset(green,0,sizeof(int)*alto*ancho);
+  memset(blue,0,sizeof(int)*alto*ancho);
 
   switch(flag){
     case SEQ:
     	aplicar_vect_vertical(image,red,green,blue);
-    	aplicar_vect_horizontal(red,green,blue,result);
+    	aplicar_vect_horizontal(image,red,green,blue,result);
     break;
 
     case PARAL:
@@ -212,7 +211,7 @@ int main(int argc, char *argv[])
 	else printf("Algoritmo sobel basico y sobel local paralelo dan distinta imagen\n");
 
 
-    QPixmap pixmap = pixmap.fromImage(matrGaussImage);
+    QPixmap pixmap = pixmap.fromImage(imageAux);
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(pixmap);
     scene.addItem(item);
 
