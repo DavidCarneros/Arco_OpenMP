@@ -37,11 +37,11 @@
 *
 *             En dicha ejecucion, se ha obtenido la siguiente salida:
 *
-*               -SobelBasico: 	 		0,208841042 segundos
-*               -SobelParallel:  		0,297414780 segundos
-*               -SobelLocal: 			0,119368309 segundos
-*				-SobelLocalParallel: 	0,363313016 segundos
-*               -SobelCompleto: 		0,139035615 segundos
+*               -SobelBasico: 	 		    0,208841042 segundos
+*               -SobelParallel:  		    0,297414780 segundos
+*               -SobelLocal: 			      0,119368309 segundos
+*				        -SobelLocalParallel: 	  0,079807512 segundos
+*               -SobelCompleto: 		    0,139035615 segundos
 *               -SobelCompletoParallel: 0,135005969 segundos
 *
 ************************************************************************************************/
@@ -212,10 +212,9 @@ double SobelLocalParallel(QImage *srcImage, QImage *dstImage) {
       if (pixelValue > 255) pixelValue = 255;
       if (pixelValue < 0) pixelValue = 0;
 	 
-      #pragma omp critical 
-      {
+      
       dstImage->setPixel(jj,ii, QColor(pixelValue, pixelValue, pixelValue).rgba());	
-      }
+      
       
       if(jj!=srcImage->width()-2){
       	desplazarLocal(local,ii,jj,srcImage);
