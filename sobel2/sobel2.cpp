@@ -23,10 +23,7 @@
 *			del algoritmo sobel que hace uso de la localidad es aproximadamente la mitad del tiempo del algoritmo basico.
 *			Es un resultado logico, pues reutilizando el valor de pixeles estamos reduciendo considerablemente el numero
 *			de accesos a memoria.
-*
-*			-Sin embargo, el algortimo SobelLocalParallel tiene el peor tiempo entre todos los demas algoritmos.
-*			Esto puede deberse a que esta funcion cuenta con una sección crítica, lo que significa que unas hebras
-*			tienen que esperar hasta que ocurra algo en otra hebra. Estas esperas implican perdida de rendimiento.  
+* 
 *
 *			-En lo que respecta a los algoritmos que usan los dos kernels, la diferencia de tiempos entre la version
 *			secuencial y la version paralela es insignificante. 
@@ -37,11 +34,11 @@
 *
 *             En dicha ejecucion, se ha obtenido la siguiente salida:
 *
-*               -SobelBasico: 	 		    0,208841042 segundos
-*               -SobelParallel:  		    0,297414780 segundos
-*               -SobelLocal: 			      0,119368309 segundos
-*				        -SobelLocalParallel: 	  0,079807512 segundos
-*               -SobelCompleto: 		    0,139035615 segundos
+*               -SobelBasico: 	 		0,208841042 segundos
+*               -SobelParallel:  		0,297414780 segundos
+*               -SobelLocal: 			0,119368309 segundos
+*				-SobelLocalParallel: 	0,079807512 segundos
+*               -SobelCompleto: 		0,139035615 segundos
 *               -SobelCompletoParallel: 0,135005969 segundos
 *
 ************************************************************************************************/
