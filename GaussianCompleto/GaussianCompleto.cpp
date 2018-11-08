@@ -172,6 +172,39 @@ void aplicar_vect_vertical_parallel(QImage* image,int *red, int *green, int *blu
     
 }	
 
+void aplicar_vect_horizontal_paralelo(int* red, int* green, int* blue, QImage* result) {
+  
+  int h, w,j;
+  int minj, supj; 
+  int indice;
+  int redAux,greenAux,blueAux;
+
+  #pragma omp parallel for private(w,minj,supj,redAux,greenAux,blueAux,indice,j,h)
+  for (h = 0; h < alto; h++)
+    
+    for (w = 0; w < ancho ; w++) {
+
+
+	  minj = max((M-w),0);			
+	  supj = min((ancho+M-w),N);	 
+	  	
+	  	redAux=0,greenAux=0,blueAux=0;
+
+		for (j=minj; j<supj; j++)	{
+
+			indice = h*ancho + w+j-M;
+
+			redAux += vectorGauss[j]*red[indice];
+			greenAux += vectorGauss[j]*green[indice];
+			blueAux += vectorGauss[j]*blue[indice];
+
+		};
+		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());
+      
+	} 
+}	
+
+
 double separa_vectores(QImage* image, QImage* result, int flag){
 
   double start_time = omp_get_wtime();
@@ -192,6 +225,8 @@ double separa_vectores(QImage* image, QImage* result, int flag){
     break;
 
     case PARAL:
+    	aplicar_vect_vertical_parallel(image,red,green,blue);
+    	aplicar_vect_horizontal_paralelo(red,green,blue,result);
     break;
 
     case SEQ_HOR_PARAL_VERT:
@@ -200,7 +235,8 @@ double separa_vectores(QImage* image, QImage* result, int flag){
     break;
 
     case PARAL_HOR_SEQ_VERT:
-
+    	aplicar_vect_vertical(image,red,green,blue);
+    	aplicar_vect_horizontal_paralelo(red,green,blue,result);
     break;
   }  
 
@@ -242,6 +278,18 @@ int main(int argc, char *argv[])
 
 	computeTime = separa_vectores(&image, &imageAux,SEQ_HOR_PARAL_VERT);
 	printf("separa_vectores con el vertical paralelo y el horizontal secuencial time: %0.9f seconds\n", computeTime);
+
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
+	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
+
+	computeTime = separa_vectores(&image, &imageAux,PARAL_HOR_SEQ_VERT);
+	printf("separa_vectores con el vertical secuencial y el horizontal paralelo time: %0.9f seconds\n", computeTime);
+
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
+	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
+
+	computeTime = separa_vectores(&image, &imageAux,PARAL);
+	printf("separa_vectores con el vertical paralelo y el horizontal paralelo time: %0.9f seconds\n", computeTime);
 
 	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
 	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
