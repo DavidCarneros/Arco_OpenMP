@@ -65,91 +65,112 @@ double naive_matriz(QImage* image, QImage* result) {
 
 void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
   
-  int h, w, i, j;
-  int mini, minj, supi, supj;
+  int h, w, i;
+  int mini, supi;
   QRgb aux;  
   int indice;
+  int redAux,greenAux,blueAux;
 
   for (h = 0; h < alto; h++)
     
     for (w = 0; w < ancho ; w++) {
 
-	  /* Aplicamos el kernel (matrizGauss dividida entre 256) al entorno de cada pixel de coordenadas (w,h)
-		 Corresponde multiplicar la componente matrizGauss[i,j] por el pixel de coordenadas (w-M+j, h-M+i)
-		 Pero ha de cumplirse 0<=w-M+j<ancho y 0<=h-M+i<alto. Por tanto: M-w<=j<ancho+M-w y M-h<=i<alto+M-h
-		 Además, los índices i y j de la matriz deben cumplir 0<=j<N, 0<=i<N
-		 Se deduce:  máx(M-w,0) <= j < mín(ancho+M-w,N); máx(M-h,0) <= i < mín(alto+M-h,N)*/
+	  mini = max((M-h),0);
+	  supi = min((alto+M-h),N);
 	  
-	  indice=(h*ancho + w);
+	  redAux=0,greenAux=0,blueAux=0;
 
-
-	  mini = max((M-h),0); minj = max((M-w),0);					// Ver comentario anterior
-	  supi = min((alto+M-h),N); supj = min((ancho+M-w),N);	    // Íd.
-	  
 	  for (i=mini; i<supi; i++){
 
 			aux = image->pixel(w, h-M+i);
 
-			red[indice]+= vectorGauss[i]*qRed(aux);
-			green[indice] += vectorGauss[i]*qGreen(aux);
-			blue[indice] += vectorGauss[i]*qBlue(aux);
+			redAux += vectorGauss[i]*qRed(aux);
+			greenAux += vectorGauss[i]*qGreen(aux);
+			blueAux += vectorGauss[i]*qBlue(aux);
 		};
 
-	  
-	//  result->setPixel(w,h, QColor(red, green, blue).rgba());
+		indice=(h*ancho + w);
+
+		red[indice] = redAux;
+		green[indice] = greenAux;
+		blue[indice] = blueAux;
       
 	}
-  
-  //return omp_get_wtime() - start_time;    
-}	// Fin naive_matriz
+    
+}	
 
 void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
   
-  int h, w, i, j;
-  int mini, minj, supi, supj;
-  QRgb aux;  
- // double start_time = omp_get_wtime();
-  int redAux=0,greenAux=0,blueAux=0;
+  int h, w,j;
+  int minj, supj; 
+  int indice;
+  int redAux,greenAux,blueAux;
+
   for (h = 0; h < alto; h++)
     
     for (w = 0; w < ancho ; w++) {
 
-	  /* Aplicamos el kernel (matrizGauss dividida entre 256) al entorno de cada pixel de coordenadas (w,h)
-		 Corresponde multiplicar la componente matrizGauss[i,j] por el pixel de coordenadas (w-M+j, h-M+i)
-		 Pero ha de cumplirse 0<=w-M+j<ancho y 0<=h-M+i<alto. Por tanto: M-w<=j<ancho+M-w y M-h<=i<alto+M-h
-		 Además, los índices i y j de la matriz deben cumplir 0<=j<N, 0<=i<N
-		 Se deduce:  máx(M-w,0) <= j < mín(ancho+M-w,N); máx(M-h,0) <= i < mín(alto+M-h,N)*/
-	  
-	  
 
-
-	  mini = max((M-h),0); minj = max((M-w),0);					// Ver comentario anterior
-	  supi = min((alto+M-h),N); supj = min((ancho+M-w),N);	    // Íd.
+	  minj = max((M-w),0);			
+	  supj = min((ancho+M-w),N);	 
 	  	
 	  	redAux=0,greenAux=0,blueAux=0;
 
 		for (j=minj; j<supj; j++)	{
 
-			//aux = image->pixel(w-M+j, h);
+			indice = h*ancho + w+j-M;
 
-			redAux += vectorGauss[j]*red[h*ancho + w+j-M];
-			greenAux += vectorGauss[j]*green[h*ancho + w+j-M];
-			blueAux += vectorGauss[j]*blue[h*ancho + w+j-M];
+			redAux += vectorGauss[j]*red[indice];
+			greenAux += vectorGauss[j]*green[indice];
+			blueAux += vectorGauss[j]*blue[indice];
 
-		//	red[h*ancho + w] += vectorGauss[j]*qRed(aux);
-		//	green[h*ancho + w] += vectorGauss[j]*qGreen(aux);
-		//	blue[h*ancho + w] += vectorGauss[j]*qBlue(aux);
 		};
 		 
+
 
 		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());
       
 	}
   
-  //return omp_get_wtime() - start_time;    
-}	// Fin naive_matriz
+    
+}	
 
+void aplicar_vect_vertical_parallel(QImage* image,int *red, int *green, int *blue) {
+  
+  int h, w, i;
+  int mini, supi;
+  QRgb aux;  
+  int indice;
+  int redAux,greenAux,blueAux;
 
+  #pragma omp parallel for private(w,mini,supi,redAux,greenAux,blueAux,aux,indice,i,h)
+  for (h = 0; h < alto; h++)
+    
+    for (w = 0; w < ancho ; w++) {
+
+	  mini = max((M-h),0);
+	  supi = min((alto+M-h),N);
+	  
+	  redAux=0,greenAux=0,blueAux=0;
+
+	  for (i=mini; i<supi; i++){
+
+			aux = image->pixel(w, h-M+i);
+
+			redAux += vectorGauss[i]*qRed(aux);
+			greenAux += vectorGauss[i]*qGreen(aux);
+			blueAux += vectorGauss[i]*qBlue(aux);
+		};
+
+		indice=(h*ancho + w);
+
+		red[indice] = redAux;
+		green[indice] = greenAux;
+		blue[indice] = blueAux;
+      
+	}
+    
+}	
 
 double separa_vectores(QImage* image, QImage* result, int flag){
 
@@ -174,7 +195,8 @@ double separa_vectores(QImage* image, QImage* result, int flag){
     break;
 
     case SEQ_HOR_PARAL_VERT:
-
+    	aplicar_vect_vertical_parallel(image,red,green,blue);
+    	aplicar_vect_horizontal(red,green,blue,result);
     break;
 
     case PARAL_HOR_SEQ_VERT:
@@ -217,6 +239,12 @@ int main(int argc, char *argv[])
 	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
 	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
 
+
+	computeTime = separa_vectores(&image, &imageAux,SEQ_HOR_PARAL_VERT);
+	printf("separa_vectores con el vertical paralelo y el horizontal secuencial time: %0.9f seconds\n", computeTime);
+
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
+	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
 
     QPixmap pixmap = pixmap.fromImage(imageAux);
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(pixmap);
