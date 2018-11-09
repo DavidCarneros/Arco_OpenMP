@@ -1,3 +1,46 @@
+/**********************************************************************************************
+*
+*       SERGIO GONZALEZ VELAZQUEZ y DAVID CARNEROS PRADO 
+*
+*   --> Conclusiones:
+*			-Aplicando la propiedad de separabilidad, esto es, aplicar el vector vertical a cada
+*			punto de la imagen y después aplicar el vector horizontal a la imagen resultante hace que 
+*			el programa tenga una ganancia en velocidad de 3,259 (0,541967626s/0,166301223s) respecto
+*			al algoritmo naive_matriz que no hace uso de tal propiedad.
+*
+*			-En lo que se refiere a parelizar mediante OpenMP las funciones que aplican el vector vertical
+*			y horizontal, llegamos a las siguientes conclusiones:
+*
+*				-El programa se ejecuta en 0,125407038 segundos cuando Paralelizamos la función 
+*				vect_vertical pero seguimos utilizando la versión secuencial de la funcion que aplica
+*				el vector horizontal. Esto significa que se ha conseguido una ganancia en velocidad 
+*				respecto a la función separa_Vectores secuencial de 1,32. La ganancia en velocidad respecto 
+*				a la funcion naive_matriz  que no aplica la propiedad de separabilidad es de 4,32
+*
+*				-Sin embargo, al paralelizar la función vect_horizontal y mantener secuencial la función 
+*				que aplica el vector vertical no se consigue ninguna mejora significativa respecto a 
+*				śepara_vectores secuencial, ya que se obtienen tiempos de ejecución similares.
+*
+*				-Cuando paralelizamos tanto la función que aplica el vector horizontal como vertical, 
+*				el programa se ejecuta en un tiempo similar a cuando paralelizamos únicamente la función
+*				que aplica el vector vertical. Luego, podemos concluir que las mejoras en velocidad en 
+*				separa_vectores secuencial se deben únicamente a las mejoras conseguidas por paralelizar la 
+*				función vect_vertical. 
+*
+*
+*   --> Nota: Los tiempos de ejecucion utilizados para llegar a las conclusiones anteriores
+*             han sido obtenidos ejecutando el programa en un computador con 2 nucleos.
+*
+*             En dicha ejecucion, se ha obtenido la siguiente salida:
+*
+*				-naive_matriz: 	 										0,541967626 segundos
+*               -separa_vectores secuencial:  							0,166301223 segundos
+*               -vect_vertical_parallel-vect_horizontal secuencial: 	0,125407038 segundos
+*				-vect_vertical secuencial vect_horizontal_parallel: 	0,174392511 segundos
+*               -vect_vertical_parallel vect_horizontal_parallel: 		0,125862559 segundos
+*
+*************************************************************************************************/
+
 #include <QtGui/QApplication>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -71,12 +114,12 @@ void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
   int indice;
   int redAux,greenAux,blueAux;
 
-  for (h = 0; h < alto; h++)
-    
-    for (w = 0; w < ancho ; w++) {
+  for (h = 0; h < alto; h++){
 
-	  mini = max((M-h),0);
-	  supi = min((alto+M-h),N);
+  	mini = max((M-h),0);
+	supi = min((alto+M-h),N);
+
+    for (w = 0; w < ancho ; w++) {
 	  
 	  redAux=0,greenAux=0,blueAux=0;
 
@@ -96,6 +139,9 @@ void aplicar_vect_vertical(QImage* image,int *red, int *green, int *blue) {
 		blue[indice] = blueAux;
       
 	}
+  }
+
+ 
     
 }	
 
@@ -109,7 +155,6 @@ void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
   for (h = 0; h < alto; h++)
     
     for (w = 0; w < ancho ; w++) {
-
 
 	  minj = max((M-w),0);			
 	  supj = min((ancho+M-w),N);	 
@@ -126,13 +171,8 @@ void aplicar_vect_horizontal(int* red, int* green, int* blue, QImage* result) {
 
 		};
 		 
-
-
-		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());
-      
-	}
-  
-    
+		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());  
+	}  
 }	
 
 void aplicar_vect_vertical_parallel(QImage* image,int *red, int *green, int *blue) {
@@ -143,14 +183,15 @@ void aplicar_vect_vertical_parallel(QImage* image,int *red, int *green, int *blu
   int indice;
   int redAux,greenAux,blueAux;
 
-  #pragma omp parallel for private(w,mini,supi,redAux,greenAux,blueAux,aux,indice,i,h)
-  for (h = 0; h < alto; h++)
-    
-    for (w = 0; w < ancho ; w++) {
+  #pragma omp parallel for private(w,mini,supi,redAux,greenAux,blueAux,aux,indice,i)
 
-	  mini = max((M-h),0);
-	  supi = min((alto+M-h),N);
-	  
+  for (h = 0; h < alto; h++){
+
+  	mini = max((M-h),0);
+	supi = min((alto+M-h),N);
+
+  	for (w = 0; w < ancho ; w++) {
+
 	  redAux=0,greenAux=0,blueAux=0;
 
 	  for (i=mini; i<supi; i++){
@@ -166,24 +207,23 @@ void aplicar_vect_vertical_parallel(QImage* image,int *red, int *green, int *blu
 
 		red[indice] = redAux;
 		green[indice] = greenAux;
-		blue[indice] = blueAux;
-      
+		blue[indice] = blueAux; 
 	}
-    
+  }
+   
 }	
 
-void aplicar_vect_horizontal_paralelo(int* red, int* green, int* blue, QImage* result) {
+void aplicar_vect_horizontal_parallel(int* red, int* green, int* blue, QImage* result) {
   
   int h, w,j;
   int minj, supj; 
   int indice;
   int redAux,greenAux,blueAux;
 
-  #pragma omp parallel for private(w,minj,supj,redAux,greenAux,blueAux,indice,j,h)
+  #pragma omp parallel for private(w,minj,supj,redAux,greenAux,blueAux,indice,j)
   for (h = 0; h < alto; h++)
     
     for (w = 0; w < ancho ; w++) {
-
 
 	  minj = max((M-w),0);			
 	  supj = min((ancho+M-w),N);	 
@@ -200,7 +240,6 @@ void aplicar_vect_horizontal_paralelo(int* red, int* green, int* blue, QImage* r
 
 		};
 		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());
-      
 	} 
 }	
 
@@ -226,7 +265,7 @@ double separa_vectores(QImage* image, QImage* result, int flag){
 
     case PARAL:
     	aplicar_vect_vertical_parallel(image,red,green,blue);
-    	aplicar_vect_horizontal_paralelo(red,green,blue,result);
+    	aplicar_vect_horizontal_parallel(red,green,blue,result);
     break;
 
     case SEQ_HOR_PARAL_VERT:
@@ -236,7 +275,7 @@ double separa_vectores(QImage* image, QImage* result, int flag){
 
     case PARAL_HOR_SEQ_VERT:
     	aplicar_vect_vertical(image,red,green,blue);
-    	aplicar_vect_horizontal_paralelo(red,green,blue,result);
+    	aplicar_vect_horizontal_parallel(red,green,blue,result);
     break;
   }  
 
@@ -245,7 +284,6 @@ double separa_vectores(QImage* image, QImage* result, int flag){
   free(blue);
 
   return omp_get_wtime() - start_time;  
-
 }
 
 
@@ -266,33 +304,40 @@ int main(int argc, char *argv[])
     QImage matrGaussImage(image);
     QImage imageAux(image);
 
+    /*naive_matriz y gauss separa_vectores secuencial*/
     double computeTime = naive_matriz(&image, &matrGaussImage);
     printf("naive_matriz time: %0.9f seconds\n", computeTime);
     
 	computeTime = separa_vectores(&image, &imageAux,SEQ);
+
 	printf("separa_vectores secuencial time: %0.9f seconds\n", computeTime);
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan la misma imagen\n\n");
+	else printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan distinta imagen\n\n");
 
-	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
-	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
 
-
+	/*separa_vectores con vect_vertical_parallel y vect_horizontal secuencial*/
 	computeTime = separa_vectores(&image, &imageAux,SEQ_HOR_PARAL_VERT);
-	printf("separa_vectores con el vertical paralelo y el horizontal secuencial time: %0.9f seconds\n", computeTime);
+	printf("separa_vectores con vect_vertical_parallel y vect_horizontal secuencial time: %0.9f seconds\n", computeTime);
 
-	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
-	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan la misma imagen\n\n");
+	else printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan distinta imagen\n\n");
 
+
+	/*separa_vectores con vect_vertical secuencial y vect_horizontal_parallel*/
 	computeTime = separa_vectores(&image, &imageAux,PARAL_HOR_SEQ_VERT);
-	printf("separa_vectores con el vertical secuencial y el horizontal paralelo time: %0.9f seconds\n", computeTime);
+	printf("separa_vectores con vect_vertical secuencial y vect_horizontal_parallel time: %0.9f seconds\n", computeTime);
 
-	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
-	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
+	if (matrGaussImage == imageAux) printf("Algoritmo naive_matriz y gauss separa_vectores dan la misma imagen\n\n");
+	else printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan distinta imagen\n\n");
 
+
+	/*separa_vectores con vect_vertical_paralle y vect_horizontal_parallel */
 	computeTime = separa_vectores(&image, &imageAux,PARAL);
-	printf("separa_vectores con el vertical paralelo y el horizontal paralelo time: %0.9f seconds\n", computeTime);
+	printf("separa_vectores con vect_vertical_paralle y vect_horizontal_parallel time: %0.9f seconds\n", computeTime);
 
-	if (matrGaussImage == imageAux) printf("Algoritmo gauss basico y gauss aplicando vectores dan la misma imagen\n");
-	else printf("Algoritmo gauss basico y gauss aplicando vectores dan distinta imagen\n");
+	if (matrGaussImage == imageAux) printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan la misma imagen\n");
+	else printf("Algoritmo gauss naive_matriz y gauss separa_vectores dan distinta imagen\n");
+
 
     QPixmap pixmap = pixmap.fromImage(imageAux);
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(pixmap);
