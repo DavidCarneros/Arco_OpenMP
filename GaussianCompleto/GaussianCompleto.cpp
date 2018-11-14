@@ -18,14 +18,18 @@
 *				a la funcion naive_matriz  que no aplica la propiedad de separabilidad es de 4,32
 *
 *				-Sin embargo, al paralelizar la función vect_horizontal y mantener secuencial la función 
-*				que aplica el vector vertical no se consigue ninguna mejora significativa respecto a 
-*				śepara_vectores secuencial, ya que se obtienen tiempos de ejecución similares.
+*				que aplica el vector vertical el tiempo de ejecución de la función separa_vectores es 
+*				mayor que el tiempo de ejecución de separa_vectores secuencial. Esto se debe a que las hebras deben
+*				de sincronizarse en la sección crítica que tenemos al componer la imagen resultado ('result'), y como
+*				deciamos en prácticas anteriores, la sincronización de hebras conlleva esperas.
 *
 *				-Cuando paralelizamos tanto la función que aplica el vector horizontal como vertical, 
-*				el programa se ejecuta en un tiempo similar a cuando paralelizamos únicamente la función
-*				que aplica el vector vertical. Luego, podemos concluir que las mejoras en velocidad en 
-*				separa_vectores secuencial se deben únicamente a las mejoras conseguidas por paralelizar la 
-*				función vect_vertical. 
+*				el programa se ejecuta en un tiempo menor que cuando paralelizamos exclusivamente la función
+*				que aplica el vector horizontal. Sin embargo, el tiempo es mayor que al paralelizar únicamente
+*				la función que aplica el vector vertical.
+*				
+*				-Así pues, podemos concluir que la verśión más rapida  es la que aplica la propiedad de 
+*				separabilidad y paraleliza la función que aplica el vector vertical.
 *
 *
 *   --> Nota: Los tiempos de ejecucion utilizados para llegar a las conclusiones anteriores
@@ -36,8 +40,8 @@
 *				-naive_matriz: 	 										0,541967626 segundos
 *               -separa_vectores secuencial:  							0,166301223 segundos
 *               -vect_vertical_parallel-vect_horizontal secuencial: 	0,125407038 segundos
-*				-vect_vertical secuencial vect_horizontal_parallel: 	0,174392511 segundos
-*               -vect_vertical_parallel vect_horizontal_parallel: 		0,125862559 segundos
+*				-vect_vertical secuencial vect_horizontal_parallel: 	0,428141106 segundos
+*               -vect_vertical_parallel vect_horizontal_parallel: 		0,371714327 segundos
 *
 *************************************************************************************************/
 
