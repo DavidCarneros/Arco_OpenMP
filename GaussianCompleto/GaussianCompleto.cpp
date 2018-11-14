@@ -239,7 +239,10 @@ void aplicar_vect_horizontal_parallel(int* red, int* green, int* blue, QImage* r
 			blueAux += vectorGauss[j]*blue[indice];
 
 		};
+		#pragma omp critical 
+		{
 		 result->setPixel(w,h, QColor(redAux/256, greenAux/256, blueAux/256).rgba());
+		}
 	} 
 }	
 
